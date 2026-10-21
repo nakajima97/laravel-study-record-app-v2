@@ -26,9 +26,9 @@ services:
                 condition: service_healthy
             mailpit:
                 condition: service_started
-    # 本番環境に合わせて MySQL 5.7 を使用する
+    # 本番の移行先に合わせて MySQL 8.0 を使用する
     mysql:
-        image: 'mysql:5.7'
+        image: 'mysql:8.0'
         platform: linux/amd64
         ports:
             - '${FORWARD_DB_PORT:-3306}:3306'

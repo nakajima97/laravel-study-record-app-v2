@@ -4,9 +4,9 @@
 
 ## 環境
 
-- 本番: PHP 8.3 / MySQL 5.7
+- 本番: PHP 8.3 / MySQL 8.0（リリース 1 のデプロイ時に 5.7 から移行する）
 - **main へのマージで本番に自動デプロイされる**（`.github/workflows/auto-daploy.yaml`）
-- 開発: devcontainer（Sail の `laravel.test` コンテナ）内で作業する。DB は同じ compose の `mysql`（5.7）
+- 開発: devcontainer（Sail の `laravel.test` コンテナ）内で作業する。DB は同じ compose の `mysql`（8.0）
 - テストは MySQL の `testing` DB を使う（`.env.testing` と `phpunit.xml`）
 
 ## コマンド
