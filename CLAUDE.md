@@ -18,6 +18,7 @@ php artisan test             # PHPUnit（事前に npm run build が必要）
 ./vendor/bin/phpstan analyse # Larastan
 ./tools/php-cs-fixer/vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run  # コードスタイル
 npm run build                # フロントのビルド
+npm run test:e2e             # Playwright E2E（事前に npm run build が必要。DB は testing_e2e をテストごとに作り直す）
 ```
 
 コードスタイルは php-cs-fixer で管理している（Pint は使わない）。
