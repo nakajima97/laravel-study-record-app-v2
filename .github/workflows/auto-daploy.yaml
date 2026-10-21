@@ -6,6 +6,8 @@ on:
     types: [closed]
 jobs:
   deploy:
+    # マージされずにクローズされた PR ではデプロイしない
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     env:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
@@ -14,10 +16,15 @@ jobs:
       ASSETS_BUILD_FILE_PATH: ${{ secrets.ASSETS_BUILD_FILE_PATH }}
       LARAVEL_DIR: ${{ secrets.LARAVEL_DIR }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
       - name: init
         run: |
-          npm install
+          npm ci
           npm run build
           echo "$SECRET_KEY" > secret_key
           chmod 600 secret_key

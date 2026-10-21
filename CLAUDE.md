@@ -1,0 +1,26 @@
+# 学習記録アプリ
+
+学習時間をカテゴリーごとに記録・分析する Laravel アプリ。
+
+## 環境
+
+- 本番: PHP 8.3 / MySQL 8.0（リリース 1 のデプロイ時に 5.7 から移行する）
+- **main へのマージで本番に自動デプロイされる**（`.github/workflows/auto-daploy.yaml`）
+- 開発: devcontainer（Sail の `laravel.test` コンテナ）内で作業する。DB は同じ compose の `mysql`（8.0）
+  - DB の接続ユーザーを変えたときは `docker compose down -v` でボリュームごと作り直す（既存ボリュームにはユーザーが作られない）
+- テストは MySQL の `testing` DB を使う（`.env.testing` と `phpunit.xml`）
+
+## コマンド
+
+コンテナ内で実行する（`sail` 経由は不要）。
+
+```sh
+php artisan test             # PHPUnit
+./vendor/bin/phpstan analyse # Larastan
+./tools/php-cs-fixer/vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run  # コードスタイル
+npm run build                # フロントのビルド
+npm run test:e2e             # Playwright E2E（事前に npm run build が必要。DB は testing_e2e をテストごとに作り直す）
+```
+
+コードスタイルは php-cs-fixer で管理している（Pint は使わない）。
+

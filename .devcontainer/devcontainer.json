@@ -1,0 +1,32 @@
+// https://aka.ms/devcontainer.json
+{
+	"name": "study-record-app",
+	"dockerComposeFile": [
+		"../docker-compose.yml"
+	],
+	"service": "laravel.test",
+	"workspaceFolder": "/var/www/html",
+	// ホスト側で実行: .env がなければ作成する（compose が WWWUSER などを参照するため）
+	"initializeCommand": "test -f .env || cp .env.example .env",
+	"features": {
+		// Claude Code は docker/8.3/Dockerfile でインストールする
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+	// Claude Code の認証・設定をコンテナ再作成後も保持する
+	"mounts": [
+		"source=claude-code-config-${devcontainerId},target=/home/sail/.claude,type=volume"
+	],
+	"containerEnv": {
+		"CLAUDE_CONFIG_DIR": "/home/sail/.claude",
+		// ホストで GH_TOKEN を設定しておくと、コンテナ内で gh / git push が使える
+		"GH_TOKEN": "${localEnv:GH_TOKEN}"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [],
+			"settings": {}
+		}
+	},
+	"remoteUser": "sail",
+	"postCreateCommand": "bash .devcontainer/post-create.sh"
+}

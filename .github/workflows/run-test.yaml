@@ -3,30 +3,38 @@ on:
   pull_request:
 
 jobs:
-  phpstan:
-    # Ubuntuの最新版を利用する
+  phpunit:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        # CI は本番の移行先に合わせて MySQL 8.0 で検証する
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: testing
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
-      # リポジトリの最新ファイル1世代分だけをチェックアウト
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      # PHP環境のセットアップ
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
-          tools: composer, cs2pr
+          php-version: '8.3'
+          tools: composer
           coverage: none
 
       - name: Composer install
-        run: composer install
-
-      - name: Setup Laravel
-        run: |
-          npm i
-          npm run build
+        run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Run Test
+        env:
+          DB_HOST: 127.0.0.1
         run: php artisan test
