@@ -133,4 +133,181 @@ class CategoryTest extends TestCase
         $response->assertStatus(302);
         $this->assertDatabaseHas('categories', ['id' => $category->id, 'name' => '変更後のカテゴリー名']);
     }
+
+    public function test_ログインしていないときはカテゴリーの各画面と操作にアクセスできない(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id]);
+
+        $this->get('/categories/create')->assertRedirect('/');
+        $this->get('/categories/' . $category->id)->assertRedirect('/');
+        $this->get('/categories/' . $category->id . '/edit')->assertRedirect('/');
+        $this->post('/categories', ['name' => '未ログイン'])->assertRedirect('/');
+        $this->put('/categories/' . $category->id, ['name' => '未ログイン'])->assertRedirect('/');
+        $this->post('/categories/archive/' . $category->id)->assertRedirect('/');
+        $this->delete('/categories/archive/' . $category->id)->assertRedirect('/');
+
+        $this->assertDatabaseMissing('categories', ['name' => '未ログイン']);
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'name' => $category->name, 'is_archive' => false]);
+    }
+
+    public function test_カテゴリー一覧は並び順どおりに表示され_アーカイブ済みは別に渡される(): void
+    {
+        $user = User::factory()->create();
+
+        $first = Category::factory()->create(['user_id' => $user->id, 'name' => 'カテゴリーA']);
+        $second = Category::factory()->create(['user_id' => $user->id, 'name' => 'カテゴリーB']);
+        $third = Category::factory()->create(['user_id' => $user->id, 'name' => 'カテゴリーC']);
+        $archived = Category::factory()->create(['user_id' => $user->id, 'name' => 'アーカイブ済みカテゴリー']);
+        $archived->archive();
+
+        CategoryOrder::create([
+            'user_id' => $user->id,
+            'category_order' => [$third->id, $first->id, $second->id],
+        ]);
+
+        $response = $this->actingAs($user)->get('/categories');
+
+        $response->assertStatus(200);
+        $response->assertSeeText('カテゴリー一覧');
+        $response->assertSeeText('カテゴリー追加');
+        $response->assertSeeTextInOrder(['カテゴリーC', 'カテゴリーA', 'カテゴリーB', 'アーカイブ済みカテゴリー']);
+        $response->assertViewHas('categories', function ($categories) use ($first, $second, $third) {
+            return $categories->pluck('id')->all() === [$third->id, $first->id, $second->id];
+        });
+        $response->assertViewHas('archive_categories', function ($categories) use ($archived) {
+            return $categories->pluck('id')->all() === [$archived->id];
+        });
+    }
+
+    public function test_カテゴリー追加画面を表示できる(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/categories/create');
+
+        $response->assertStatus(200);
+        $response->assertSeeText('カテゴリー記録追加');
+        $response->assertSeeText('カテゴリー名');
+    }
+
+    public function test_カテゴリーを登録するとログインユーザーのカテゴリーになり一覧へリダイレクトする(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/categories', ['name' => '新しいカテゴリー']);
+
+        $response->assertRedirect('/categories');
+        $this->assertDatabaseHas('categories', [
+            'name' => '新しいカテゴリー',
+            'user_id' => $user->id,
+            'is_archive' => false,
+        ]);
+    }
+
+    public function test_カテゴリー名が空のときは登録できない(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->from('/categories/create')
+            ->post('/categories', ['name' => '']);
+
+        $response->assertRedirect('/categories/create');
+        $response->assertSessionHasErrors('name');
+        $this->assertDatabaseCount('categories', 0);
+        $this->assertDatabaseCount('category_orders', 0);
+    }
+
+    public function test_カテゴリー詳細画面を表示できる(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id, 'name' => '詳細カテゴリー']);
+
+        $response = $this->actingAs($user)->get('/categories/' . $category->id);
+
+        $response->assertStatus(200);
+        $response->assertSeeText('カテゴリー詳細');
+        $response->assertSeeText('カテゴリー名：詳細カテゴリー');
+        $response->assertSee(route('categories.edit', $category->id));
+        $response->assertViewHas('category', fn ($viewCategory) => $viewCategory->id === $category->id);
+    }
+
+    public function test_存在しないカテゴリーの詳細_編集_更新は404になる(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/categories/999999')->assertStatus(404);
+        $this->actingAs($user)->get('/categories/999999/edit')->assertStatus(404);
+        $this->actingAs($user)->put('/categories/999999', ['name' => '変更'])->assertStatus(404);
+    }
+
+    public function test_カテゴリー編集画面には現在の名前とアーカイブボタンが表示される(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id, 'name' => '編集カテゴリー']);
+
+        $response = $this->actingAs($user)->get('/categories/' . $category->id . '/edit');
+
+        $response->assertStatus(200);
+        $response->assertSeeText('カテゴリー編集');
+        $response->assertSee('value="編集カテゴリー"', false);
+        $response->assertSeeText('アーカイブする');
+        $response->assertDontSeeText('アーカイブ解除する');
+    }
+
+    public function test_アーカイブ済みカテゴリーの編集画面にはアーカイブ解除ボタンが表示される(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id]);
+        $category->archive();
+
+        $response = $this->actingAs($user)->get('/categories/' . $category->id . '/edit');
+
+        $response->assertStatus(200);
+        $response->assertSeeText('アーカイブ解除する');
+        $response->assertDontSeeText('アーカイブする');
+    }
+
+    public function test_カテゴリー名を変更すると一覧へリダイレクトする(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id, 'name' => '変更前']);
+
+        $response = $this->actingAs($user)->put('/categories/' . $category->id, ['name' => '変更後']);
+
+        $response->assertRedirect('/categories');
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'name' => '変更後', 'user_id' => $user->id]);
+    }
+
+    public function test_カテゴリーをアーカイブすると一覧へリダイレクトし_通常の一覧から外れる(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->post('/categories/archive/' . $category->id);
+
+        $response->assertRedirect('/categories');
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'is_archive' => true]);
+
+        $this->actingAs($user)->get('/categories')
+            ->assertViewHas('categories', fn ($categories) => $categories->isEmpty())
+            ->assertViewHas('archive_categories', fn ($categories) => $categories->pluck('id')->all() === [$category->id]);
+    }
+
+    public function test_カテゴリーのアーカイブを解除すると一覧へリダイレクトし_通常の一覧に戻る(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id]);
+        $category->archive();
+
+        $response = $this->actingAs($user)->delete('/categories/archive/' . $category->id);
+
+        $response->assertRedirect('/categories');
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'is_archive' => false]);
+
+        $this->actingAs($user)->get('/categories')
+            ->assertViewHas('categories', fn ($categories) => $categories->pluck('id')->all() === [$category->id])
+            ->assertViewHas('archive_categories', fn ($categories) => $categories->isEmpty());
+    }
 }
