@@ -7,7 +7,7 @@
 - 本番: PHP 8.3 / MySQL 5.7
 - **main へのマージで本番に自動デプロイされる**（`.github/workflows/auto-daploy.yaml`）
 - 開発: devcontainer（Sail の `laravel.test` コンテナ）内で作業する。DB は同じ compose の `mysql`（5.7）
-- テストは `testing` DB を使う（`phpunit.xml`）
+- テストは MySQL の `testing` DB を使う（`.env.testing` と `phpunit.xml`）
 
 ## コマンド
 

@@ -23,7 +23,7 @@ return (new PhpCsFixer\Config())
         // 'class_definition' => array('singleLine' => true),
         'concat_space' => ['spacing' => 'one'],
         'declare_equal_normalize' => true,
-        'function_typehint_space' => true,
+        'type_declaration_spaces' => true,
         'single_line_comment_style' => ['comment_types' => ['hash']],
         'include' => true,
         'lowercase_cast' => true,
