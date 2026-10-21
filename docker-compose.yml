@@ -1,12 +1,11 @@
-version: '3'
 services:
     laravel.test:
         build:
-            context: ./vendor/laravel/sail/runtimes/8.2
+            context: ./docker/8.3
             dockerfile: Dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'
-        image: sail-8.2/app
+        image: sail-8.3/app
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
@@ -23,13 +22,14 @@ services:
         networks:
             - sail
         depends_on:
-            - mysql
-            - redis
-            - meilisearch
-            - mailpit
-            - selenium
+            mysql:
+                condition: service_healthy
+            mailpit:
+                condition: service_started
+    # 本番環境に合わせて MySQL 5.7 を使用する
     mysql:
-        image: 'mysql/mysql-server:8.0'
+        image: 'mysql:5.7'
+        platform: linux/amd64
         ports:
             - '${FORWARD_DB_PORT:-3306}:3306'
         environment:
@@ -39,9 +39,10 @@ services:
             MYSQL_USER: '${DB_USERNAME}'
             MYSQL_PASSWORD: '${DB_PASSWORD}'
             MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
         volumes:
             - 'sail-mysql:/var/lib/mysql'
-            - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+            - './docker/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
         networks:
             - sail
         healthcheck:
@@ -50,39 +51,7 @@ services:
                 - mysqladmin
                 - ping
                 - '-p${DB_PASSWORD}'
-            retries: 3
-            timeout: 5s
-    redis:
-        image: 'redis:alpine'
-        ports:
-            - '${FORWARD_REDIS_PORT:-6379}:6379'
-        volumes:
-            - 'sail-redis:/data'
-        networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - redis-cli
-                - ping
-            retries: 3
-            timeout: 5s
-    meilisearch:
-        image: 'getmeili/meilisearch:latest'
-        ports:
-            - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
-        volumes:
-            - 'sail-meilisearch:/meili_data'
-        networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - wget
-                - '--no-verbose'
-                - '--spider'
-                - 'http://localhost:7700/health'
-            retries: 3
+            retries: 10
             timeout: 5s
     mailpit:
         image: 'axllent/mailpit:latest'
@@ -91,21 +60,9 @@ services:
             - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
         networks:
             - sail
-    selenium:
-        image: selenium/standalone-chrome
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        volumes:
-            - '/dev/shm:/dev/shm'
-        networks:
-            - sail
 networks:
     sail:
         driver: bridge
 volumes:
     sail-mysql:
-        driver: local
-    sail-redis:
-        driver: local
-    sail-meilisearch:
         driver: local
