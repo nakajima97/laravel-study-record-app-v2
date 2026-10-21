@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\CategoryOrder;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateCategoryOrderRequest extends FormRequest
@@ -23,17 +22,21 @@ class UpdateCategoryOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'required|integer',
-            'category_order' => 'required|array'
+            'category_order' => 'required|array',
+            'category_order.*' => 'integer',
         ];
     }
 
     /**
-     * @return \App\Models\CategoryOrder
+     * 並び順（カテゴリー ID の配列）
+     *
+     * @return int[]
      */
-    public function makeCategoryOrder()
+    public function categoryOrder(): array
     {
-        $category_order = new CategoryOrder($this->validated());
-        return $category_order;
+        /** @var array<int, int|string> $order */
+        $order = $this->validated('category_order');
+
+        return array_map('intval', $order);
     }
 }
