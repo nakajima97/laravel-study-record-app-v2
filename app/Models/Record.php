@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Record extends Model
 {
+    /** @use HasFactory<\Database\Factories\RecordFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -16,7 +17,7 @@ class Record extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Category, Record>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Category, $this>
      */
     public function category()
     {
