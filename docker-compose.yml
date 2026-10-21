@@ -29,7 +29,6 @@ services:
     # 本番の移行先に合わせて MySQL 8.0 を使用する
     mysql:
         image: 'mysql:8.0'
-        platform: linux/amd64
         ports:
             - '${FORWARD_DB_PORT:-3306}:3306'
         environment:

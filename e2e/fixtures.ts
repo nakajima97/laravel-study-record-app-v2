@@ -5,7 +5,13 @@ import { test as base, expect, type Page } from '@playwright/test';
 export const test = base.extend<{ resetDatabase: void }>({
     resetDatabase: [
         async ({}, use) => {
-            execSync('php artisan migrate:fresh --seed --seeder=E2eSeeder --env=e2e --force', { stdio: 'pipe' });
+            try {
+                execSync('php artisan migrate:fresh --seed --seeder=E2eSeeder --env=e2e --force', { stdio: 'pipe' });
+            } catch (error) {
+                // 失敗の原因（Laravel 側のエラー）がレポートに残るように出力を付けて投げ直す
+                const { stdout, stderr } = error as { stdout?: Buffer; stderr?: Buffer };
+                throw new Error(`DB のリセットに失敗した\n${stdout ?? ''}${stderr ?? ''}`);
+            }
             await use();
         },
         { auto: true },

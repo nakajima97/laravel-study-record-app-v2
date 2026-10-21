@@ -46,7 +46,6 @@
    - `routes/api.php`、Sanctum、`EnsureFrontendRequestsAreStateful` を外す。`personal_access_tokens` テーブルはそのまま残す
 5. Laravel を 10 → 11 → 12 → 13 と 1 段ずつ上げる。各段で完了条件を満たしてからコミットする（途中の段ではデプロイしない）
    - Laravel 11 のディレクトリ構成（`bootstrap/app.php` への集約、config の差し替え）には移行しない。新構成の config はデフォルトが `SESSION_DRIVER=database` などに変わり、本番の `.env` の修正が必要になるため。既存の `app/Http/Kernel.php` と `config/` を保持する
-   - composer.json の `php` を `^8.3` にする
    - `nunomaduro/larastan` を `larastan/larastan` に置き換える。使っていない `laravel/pint` と `laravel/breeze` を外す
    - Vite と `laravel-vite-plugin` を上げる。Tailwind は 3 のまま
 

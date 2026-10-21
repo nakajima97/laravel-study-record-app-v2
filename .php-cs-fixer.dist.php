@@ -102,8 +102,7 @@ return (new PhpCsFixer\Config())
         ->exclude([ // 除外ファイル
             'vendor',
             'config',
-            'database',
-            'database',
+            'database/migrations',
             'bootstrap',
             'public',
             'storage',

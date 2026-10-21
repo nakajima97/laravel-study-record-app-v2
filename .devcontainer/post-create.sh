@@ -4,7 +4,9 @@ set -euo pipefail
 composer install
 composer install --working-dir=tools/php-cs-fixer
 npm ci
-# Feature テストが Vite の manifest を参照するためビルドしておく
+# ブラウザは node_modules 配下に入る（PLAYWRIGHT_BROWSERS_PATH=0）ため npm ci のたびに入れ直す
+npx playwright install chromium
+# アプリの表示と E2E テストのためにビルドしておく（PHPUnit には不要）
 npm run build
 
 # APP_KEY が未設定なら生成する
