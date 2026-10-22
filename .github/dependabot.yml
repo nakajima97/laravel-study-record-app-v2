@@ -1,0 +1,53 @@
+version: 2
+updates:
+  # アプリ本体の PHP パッケージ
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    groups:
+      # マイナー・パッチはまとめて 1 PR にする。メジャーは個別 PR
+      composer-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # php-cs-fixer（tools 配下に分離している）
+  - package-ecosystem: composer
+    directory: /tools/php-cs-fixer
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 2
+
+  # フロントエンド・E2E の npm パッケージ
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # GitHub Actions のアクション
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      timezone: Asia/Tokyo
+    groups:
+      github-actions:
+        patterns:
+          - "*"
