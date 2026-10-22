@@ -11,7 +11,7 @@ class FetchDailyRecordForLast7Days
      * 直近7日間の日ごとの総学習時間を取得する
      *
      * @param int $user_id
-     * @return mixed
+     * @return array<int, Record|array<string, int>>
      */
     public function __invoke($user_id)
     {
@@ -40,6 +40,6 @@ class FetchDailyRecordForLast7Days
             ];
         });
 
-        return $daily_record;
+        return $daily_record->all();
     }
 }

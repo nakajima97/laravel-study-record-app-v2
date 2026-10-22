@@ -1,3 +1,4 @@
+import { Link } from "@inertiajs/react";
 import { AppLayout } from "@/widgets/app-layout";
 
 type TodayRecord = {
@@ -33,12 +34,12 @@ export function DashboardPage({ today_records, total_study_time_this_month, tota
                         <div className="p-6 pb-0 text-gray-900 dark:text-gray-100">
                             <section className="bg-gray-100 dark:text-gray-400 dark:bg-gray-900 body-font overflow-hidden">
                                 <div className="p-4 w-full">
-                                    <a
+                                    <Link
                                         href={route("records.create")}
                                         className="flex mx-auto text-white bg-indigo-500 border-0 py-2 px-8 focus:outline-none hover:bg-indigo-600 rounded text-lg"
                                     >
                                         学習記録を付ける
-                                    </a>
+                                    </Link>
                                 </div>
                             </section>
                         </div>
