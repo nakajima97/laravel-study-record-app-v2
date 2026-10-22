@@ -19,6 +19,9 @@ php artisan test             # PHPUnit
 ./vendor/bin/phpstan analyse # Larastan
 ./tools/php-cs-fixer/vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run  # コードスタイル
 npm run build                # フロントのビルド
+npm run typecheck            # tsc
+npm run lint                 # ESLint
+npm run lint:fsd             # Steiger（FSD の構成チェック）
 npm run test:e2e             # Playwright E2E（事前に npm run build が必要。DB は testing_e2e をテストごとに作り直す）
 ```
 
