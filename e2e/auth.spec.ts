@@ -4,11 +4,12 @@ test('ログインしてダッシュボードを開き、ログアウトでき�
     await login(page, 'login@example.com');
 
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByText('今月の総学習時間：')).toBeVisible();
-    await expect(page.getByText('今日の総学習時間：')).toBeVisible();
+    // 記録がないときは「0時間」を付けずに 0 分と表示する
+    await expect(page.getByText('今月の総学習時間：')).toHaveText('今月の総学習時間： 0分');
+    await expect(page.getByText('今日の総学習時間：')).toHaveText('今日の総学習時間： 0分');
 
     await page.getByRole('button', { name: 'ログインユーザー' }).click();
-    await page.getByRole('link', { name: 'Log Out' }).click();
+    await page.getByRole('button', { name: 'Log Out' }).click();
 
     await expect(page).toHaveURL('/');
     await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
