@@ -24,14 +24,13 @@ test('学習時間を分で入力して記録を登録すると、ダッシュ�
 test('ストップウォッチのモーダルを開閉できる', async ({ page }) => {
     await page.goto('/records/create');
 
-    // モーダルには常に aria-hidden="true" が付いているので、見出しはテキストで、ボタンは includeHidden で探す
-    const heading = page.getByText('ストップウォッチ', { exact: true });
+    const heading = page.getByRole('heading', { name: 'ストップウォッチ', exact: true });
     await expect(heading).toBeHidden();
 
     await page.getByRole('button', { name: 'ストップウォッチを表示する' }).click();
     await expect(heading).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Start', includeHidden: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Close modal', includeHidden: true }).click();
+    await page.getByRole('button', { name: 'Close modal' }).click();
     await expect(heading).toBeHidden();
 });

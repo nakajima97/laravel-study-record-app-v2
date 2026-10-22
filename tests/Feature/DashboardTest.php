@@ -8,6 +8,8 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Collection;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -34,6 +36,7 @@ class DashboardTest extends TestCase
             ->get('/dashboard');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page->component('dashboard'));
     }
 
     public function test_今日の学習記録一覧が表示されている(): void
@@ -47,11 +50,22 @@ class DashboardTest extends TestCase
 
         $response->assertStatus(200);
 
-        foreach ($records as $record) {
-            $response->assertSeeText($record->category->name);
-            $response->assertSeeText($record->minute);
-            $response->assertSeeText($record->note);
-        }
+        $expected = $records->map(fn ($record) => [
+            'id' => $record->id,
+            'category_name' => $record->category->name,
+            'minute' => $record->minute,
+            'note' => $record->note,
+        ])->sortBy('id')->values()->all();
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('today_records', fn (Collection $today_records) => $today_records
+                ->map(fn ($record) => [
+                    'id' => $record['id'],
+                    'category_name' => $record['category_name'],
+                    'minute' => $record['minute'],
+                    'note' => $record['note'],
+                ])->sortBy('id')->values()->all() === $expected));
     }
 
     public function test_今日の総学習時間が表示されている(): void
@@ -72,8 +86,7 @@ class DashboardTest extends TestCase
 
         $total_minute = $records->sum('minute');
 
-        $response->assertSeeText(floor($total_minute / 60) . '時間');
-        $response->assertSeeText($total_minute % 60 . '分');
+        $response->assertInertia(fn (Assert $page) => $page->where('total_study_time_today', $total_minute));
     }
 
     public function test_今月の総学習時間が表示されている(): void
@@ -94,8 +107,7 @@ class DashboardTest extends TestCase
 
         $total_minute = $records->sum('minute') + $yesterday_record->minute;
 
-        $response->assertSeeText(floor($total_minute / 60) . '時間');
-        $response->assertSeeText($total_minute % 60 . '分');
+        $response->assertInertia(fn (Assert $page) => $page->where('total_study_time_this_month', $total_minute));
     }
 
     public function test_ダッシュボードには自分の今日の記録が新しい順に表示される(): void
@@ -138,17 +150,25 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($user)->get('/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSeeText('学習記録を付ける');
-        $response->assertSeeTextInOrder([
-            '今日の学習記録',
-            '英語', '2024-05-15 11:00:00', '時間：50分', '昼の学習',
-            '英語', '2024-05-15 08:00:00', '時間：20分', '朝の学習',
-        ]);
-        $response->assertDontSeeText('昨日の学習');
-        $response->assertDontSeeText('他人の学習');
-        $response->assertViewHas('today_records', function ($records) use ($older, $newer) {
-            return $records->pluck('id')->all() === [$newer->id, $older->id];
-        });
+        // 昨日の記録と他人の記録は含まれない
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('today_records', [
+                [
+                    'id' => $newer->id,
+                    'category_name' => '英語',
+                    'created_at' => '2024-05-15 11:00:00',
+                    'minute' => 50,
+                    'note' => '昼の学習',
+                ],
+                [
+                    'id' => $older->id,
+                    'category_name' => '英語',
+                    'created_at' => '2024-05-15 08:00:00',
+                    'minute' => 20,
+                    'note' => '朝の学習',
+                ],
+            ]));
     }
 
     public function test_ダッシュボードの総学習時間は60分以上のときだけ時間を表示する(): void
@@ -182,10 +202,9 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($user)->get('/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSeeTextInOrder(['今月の総学習時間：', '2時間', '5分', '今日の総学習時間：', '45分', '今日の学習記録']);
-        $response->assertDontSeeText('0時間');
-        $response->assertViewHas('total_study_time_this_month', 125);
-        $response->assertViewHas('total_study_time_today', 45);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('total_study_time_this_month', 125)
+            ->where('total_study_time_today', 45));
     }
 
     public function test_記録がないときの総学習時間は0分と表示される(): void
@@ -195,10 +214,10 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($user)->get('/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSeeTextInOrder(['今月の総学習時間：', '0分', '今日の総学習時間：', '0分']);
-        $response->assertViewHas('total_study_time_this_month', 0);
-        $response->assertViewHas('total_study_time_today', 0);
-        $response->assertViewHas('today_records', fn ($records) => $records->isEmpty());
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('total_study_time_this_month', 0)
+            ->where('total_study_time_today', 0)
+            ->has('today_records', 0));
     }
 
     /**

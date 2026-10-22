@@ -101,6 +101,7 @@ return (new PhpCsFixer\Config())
         PhpCsFixer\Finder::create()
         ->exclude([ // 除外ファイル
             'vendor',
+            'node_modules',
             'config',
             'database/migrations',
             'bootstrap',

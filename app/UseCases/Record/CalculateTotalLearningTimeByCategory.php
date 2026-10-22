@@ -9,7 +9,7 @@ class CalculateTotalLearningTimeByCategory
 {
     /**
      * @param int $user_id
-     * @return mixed
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Record>
      */
     public function __invoke(int $user_id)
     {

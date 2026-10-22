@@ -4,18 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
+use App\Models\Category;
 use App\UseCases\Category\GetArchivedCategoryList;
 use App\UseCases\Category\GetCategoryList;
 use App\UseCases\Category\StoreCategory;
 use App\UseCases\Category\FindCategory;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CategoryController extends Controller
 {
-    /**
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
-     */
-    public function index()
+    public function index(): Response
     {
         $user_id = Auth::id();
 
@@ -25,15 +25,15 @@ class CategoryController extends Controller
         $get_archived_category = new GetArchivedCategoryList();
         $archive_categories = $get_archived_category($user_id);
 
-        return view('category.index', ['categories' => $categories, 'archive_categories' => $archive_categories]);
+        return Inertia::render('category-list', [
+            'categories' => $categories->map(fn (Category $category) => $this->toProps($category)),
+            'archive_categories' => $archive_categories->map(fn (Category $category) => $this->toProps($category)),
+        ]);
     }
 
-    /**
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
-     */
-    public function create()
+    public function create(): Response
     {
-        return view('category.create');
+        return Inertia::render('category-create');
     }
 
     /**
@@ -54,9 +54,8 @@ class CategoryController extends Controller
 
     /**
      * @param integer $id
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
-    public function show($id)
+    public function show($id): Response
     {
         $find_category = new FindCategory();
         $category = $find_category($id);
@@ -65,14 +64,13 @@ class CategoryController extends Controller
             abort(404);
         }
 
-        return view('category.show', ['category' => $category]);
+        return Inertia::render('category-detail', ['category' => $this->toProps($category)]);
     }
 
     /**
      * @param integer $id
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
-    public function edit($id)
+    public function edit($id): Response
     {
         $find_category = new FindCategory();
         $category = $find_category($id);
@@ -81,7 +79,12 @@ class CategoryController extends Controller
             abort(404);
         }
 
-        return view('category.edit', ['category' => $category]);
+        return Inertia::render('category-edit', [
+            'category' => [
+                ...$this->toProps($category),
+                'is_archive' => (bool) $category->is_archive,
+            ],
+        ]);
     }
 
     /**
@@ -102,5 +105,18 @@ class CategoryController extends Controller
         $category->save();
 
         return redirect()->route('categories.index');
+    }
+
+    /**
+     * 画面に渡すカテゴリーの項目
+     *
+     * @return array{id: int, name: string}
+     */
+    private function toProps(Category $category): array
+    {
+        return [
+            'id' => $category->id,
+            'name' => $category->name,
+        ];
     }
 }

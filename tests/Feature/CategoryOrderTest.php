@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\CategoryOrder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
@@ -50,7 +52,25 @@ class CategoryOrderTest extends TestCase
 
         // 一覧は新しい並び順で表示される
         $this->actingAs($user)->get('/categories')
-            ->assertViewHas('categories', fn ($list) => $list->pluck('id')->all() === $reordered);
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('categories', fn (Collection $list) => $list->pluck('id')->all() === $reordered));
+    }
+
+    public function test_画面からの並び替えは保存してカテゴリー一覧に戻る(): void
+    {
+        $user = User::factory()->create();
+        $categories = Category::factory()->count(2)->create(['user_id' => $user->id]);
+        $ids = $categories->pluck('id')->all();
+        CategoryOrder::create(['user_id' => $user->id, 'category_order' => $ids]);
+
+        $reordered = [$ids[1], $ids[0]];
+        $response = $this->actingAs($user)
+            ->from('/categories')
+            ->withHeaders(['X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->patch('/category-order', ['category_order' => $reordered]);
+
+        $response->assertRedirect('/categories');
+        $this->assertSame($reordered, CategoryOrder::where('user_id', $user->id)->first()->category_order);
     }
 
     public function test_並び順がないユーザーは新しく作成される(): void

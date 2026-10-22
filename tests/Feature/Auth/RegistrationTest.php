@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -15,6 +16,7 @@ class RegistrationTest extends TestCase
         $response = $this->get('/register');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page->component('register'));
     }
 
     public function test_new_users_can_register(): void

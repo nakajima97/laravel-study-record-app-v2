@@ -10,7 +10,7 @@ class SelectTodayRecord
 {
     /**
      * @param int|string|null $user_id
-     * @return mixed
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Record>
      */
     public function __invoke($user_id)
     {

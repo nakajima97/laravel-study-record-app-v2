@@ -7,6 +7,7 @@ use App\Models\Record;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AnalysisTest extends TestCase
@@ -35,19 +36,11 @@ class AnalysisTest extends TestCase
         $response = $this->actingAs($user)->get('/records/analysis');
 
         $response->assertStatus(200);
-        $response->assertSeeTextInOrder([
-            '分析',
-            '直近7日間の学習時間',
-            '月ごとの総学習時間',
-            '年月',
-            '学習時間',
-            '総学習時間',
-            '0時間0分',
-            'カテゴリーごとの学習時間（Top10のみ表示）',
-        ]);
-        $response->assertViewHas('total_learning_time', 0);
-        $response->assertViewHas('monthly_records', fn ($records) => $records->isEmpty());
-        $response->assertViewHas('total_learning_time_by_category', fn ($records) => $records->isEmpty());
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('analysis')
+            ->where('total_learning_time', 0)
+            ->has('monthly_records.data', 0)
+            ->has('total_learning_time_by_category', 0));
     }
 
     public function test_直近7日間の日ごとの学習時間が古い順に渡され_記録のない日は0になる(): void
@@ -67,24 +60,17 @@ class AnalysisTest extends TestCase
         $response = $this->actingAs($user)->get('/records/analysis');
 
         $response->assertStatus(200);
-        $response->assertViewHas('daily_records', function ($daily_records) {
-            $actual = $daily_records->map(fn ($record) => [
-                (int) $record['year'],
-                (int) $record['month'],
-                (int) $record['day'],
-                (int) $record['total_time'],
-            ])->all();
-
-            return $actual === [
-                [2024, 5, 9, 25],
-                [2024, 5, 10, 0],
-                [2024, 5, 11, 0],
-                [2024, 5, 12, 40],
-                [2024, 5, 13, 0],
-                [2024, 5, 14, 0],
-                [2024, 5, 15, 45],
-            ];
-        });
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('analysis')
+            ->where('daily_records', [
+                ['year' => 2024, 'month' => 5, 'day' => 9, 'total_time' => 25],
+                ['year' => 2024, 'month' => 5, 'day' => 10, 'total_time' => 0],
+                ['year' => 2024, 'month' => 5, 'day' => 11, 'total_time' => 0],
+                ['year' => 2024, 'month' => 5, 'day' => 12, 'total_time' => 40],
+                ['year' => 2024, 'month' => 5, 'day' => 13, 'total_time' => 0],
+                ['year' => 2024, 'month' => 5, 'day' => 14, 'total_time' => 0],
+                ['year' => 2024, 'month' => 5, 'day' => 15, 'total_time' => 45],
+            ]));
     }
 
     public function test_月ごとの総学習時間が新しい順に10件ずつ表示される(): void
@@ -105,24 +91,26 @@ class AnalysisTest extends TestCase
         $response = $this->actingAs($user)->get('/records/analysis');
 
         $response->assertStatus(200);
-        $response->assertSeeTextInOrder([
-            '2024年5月', '2時間5分',
-            '2024年4月', '1時間0分',
-            '2023年8月', '1時間0分',
-        ]);
-        $response->assertDontSeeText('2023年7月');
-        $response->assertViewHas('monthly_records', function ($records) {
-            return $records->total() === 14
-                && $records->perPage() === 10
-                && $records->count() === 10
-                && (int) $records->first()->total_time === 125;
-        });
+        // 2024 年 5 月〜2023 年 8 月の 10 件（他人の記録は含まれない）
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('analysis')
+            ->where('monthly_records.total', 14)
+            ->where('monthly_records.per_page', 10)
+            ->has('monthly_records.data', 10)
+            ->where('monthly_records.data.0', ['year' => 2024, 'month' => 5, 'total_time' => 125])
+            ->where('monthly_records.data.1', ['year' => 2024, 'month' => 4, 'total_time' => 60])
+            ->where('monthly_records.data.9', ['year' => 2023, 'month' => 8, 'total_time' => 60]));
 
         $page2 = $this->actingAs($user)->get('/records/analysis?page=2');
 
         $page2->assertStatus(200);
-        $page2->assertSeeTextInOrder(['2023年7月', '2023年6月', '2023年5月', '2023年4月']);
-        $page2->assertDontSeeText('2023年8月');
+        $page2->assertInertia(fn (Assert $page) => $page
+            ->where('monthly_records.data', [
+                ['year' => 2023, 'month' => 7, 'total_time' => 60],
+                ['year' => 2023, 'month' => 6, 'total_time' => 60],
+                ['year' => 2023, 'month' => 5, 'total_time' => 60],
+                ['year' => 2023, 'month' => 4, 'total_time' => 60],
+            ]));
     }
 
     public function test_総学習時間が自分の記録の合計で表示される(): void
@@ -138,8 +126,7 @@ class AnalysisTest extends TestCase
         $response = $this->actingAs($user)->get('/records/analysis');
 
         $response->assertStatus(200);
-        $response->assertSeeTextInOrder(['総学習時間', '2時間15分']);
-        $response->assertViewHas('total_learning_time', 135);
+        $response->assertInertia(fn (Assert $page) => $page->where('total_learning_time', 135));
     }
 
     public function test_カテゴリーごとの学習時間が多い順に上位10件だけ渡される(): void
@@ -162,22 +149,19 @@ class AnalysisTest extends TestCase
         $response = $this->actingAs($user)->get('/records/analysis');
 
         $response->assertStatus(200);
-        $response->assertViewHas('total_learning_time_by_category', function ($records) {
-            $actual = $records->map(fn ($record) => [$record->name, (int) $record->total_learning_time])->all();
-
-            return $actual === [
-                ['カテゴリー1', 210],
-                ['カテゴリー11', 110],
-                ['カテゴリー10', 100],
-                ['カテゴリー9', 90],
-                ['カテゴリー8', 80],
-                ['カテゴリー7', 70],
-                ['カテゴリー6', 60],
-                ['カテゴリー5', 50],
-                ['カテゴリー4', 40],
-                ['カテゴリー3', 30],
-            ];
-        });
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('total_learning_time_by_category', [
+                ['name' => 'カテゴリー1', 'total_learning_time' => 210],
+                ['name' => 'カテゴリー11', 'total_learning_time' => 110],
+                ['name' => 'カテゴリー10', 'total_learning_time' => 100],
+                ['name' => 'カテゴリー9', 'total_learning_time' => 90],
+                ['name' => 'カテゴリー8', 'total_learning_time' => 80],
+                ['name' => 'カテゴリー7', 'total_learning_time' => 70],
+                ['name' => 'カテゴリー6', 'total_learning_time' => 60],
+                ['name' => 'カテゴリー5', 'total_learning_time' => 50],
+                ['name' => 'カテゴリー4', 'total_learning_time' => 40],
+                ['name' => 'カテゴリー3', 'total_learning_time' => 30],
+            ]));
     }
 
     private function createRecord(User $user, Category $category, int $minute, string $created_at): Record

@@ -47,7 +47,7 @@ test('カテゴリーをアーカイブし、解除できる', async ({ page }) 
     await expect(page).toHaveURL('/categories');
     await expect(target).toBeHidden();
 
-    await page.getByRole('link', { name: 'アーカイブ済み' }).click();
+    await page.getByRole('button', { name: 'アーカイブ済み' }).click();
     await expect(target).toBeVisible();
 
     await openEditPage(page, 'アーカイブ対象');
@@ -55,7 +55,7 @@ test('カテゴリーをアーカイブし、解除できる', async ({ page }) 
 
     await expect(page).toHaveURL('/categories');
     await expect(target).toBeVisible();
-    await page.getByRole('link', { name: 'アーカイブ済み' }).click();
+    await page.getByRole('button', { name: 'アーカイブ済み' }).click();
     await expect(target).toBeHidden();
 });
 
@@ -73,7 +73,8 @@ test('カテゴリーをドラッグで並び替えると、再読み込み後�
     await page
         .getByRole('heading', { name: '並び替え3', exact: true })
         .dragTo(page.getByRole('heading', { name: '並び替え1', exact: true }));
-    expect((await saved).ok()).toBe(true);
+    // 画面からの並び替えは保存後にカテゴリー一覧へリダイレクトする
+    expect((await saved).status()).toBe(303);
 
     const reordered = ['並び替え3', '並び替え1', '並び替え2'];
     await expect(headings).toHaveText(reordered);

@@ -11,7 +11,7 @@ class FetchMonthlyRecordPaginate
      *
      * @param int $user_id
      * @param int $paginate_num Optional
-     * @return mixed
+     * @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Record>
      */
     public function __invoke($user_id, $paginate_num = 10)
     {

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\CategoryOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 use App\Models\User;
 
@@ -33,6 +34,7 @@ class RecordTest extends TestCase
             ->get('/records/create');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page->component('record-create'));
     }
 
     public function test_レコード作成が可能(): void
@@ -89,15 +91,13 @@ class RecordTest extends TestCase
         $response = $this->actingAs($user)->get('/records/create');
 
         $response->assertStatus(200);
-        $response->assertSeeText('学習記録追加');
-        $response->assertSeeText('ストップウォッチを表示する');
-        $response->assertSeeText('記録追加');
-        $response->assertSeeTextInOrder(['カテゴリーB', 'カテゴリーA']);
-        $response->assertDontSeeText('アーカイブ済みカテゴリー');
-        $response->assertDontSeeText('他人のカテゴリー');
-        $response->assertViewHas('records', function ($records) use ($first, $second) {
-            return $records->pluck('id')->all() === [$second->id, $first->id];
-        });
+        // アーカイブ済みと他人のカテゴリーは含まれない
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('record-create')
+            ->where('categories', [
+                ['id' => $second->id, 'name' => 'カテゴリーB'],
+                ['id' => $first->id, 'name' => 'カテゴリーA'],
+            ]));
     }
 
     public function test_レコードを登録するとログインユーザーの記録になりダッシュボードへリダイレクトする(): void
