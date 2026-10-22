@@ -9,9 +9,6 @@ export default defineConfig({
             input: [
                 "resources/css/app.css",
                 "resources/js/app/index.tsx",
-                // Blade の画面（Inertia へ移行するまで）
-                "resources/js/app.js",
-                "resources/js/drag-move.js",
             ],
             refresh: true,
         }),

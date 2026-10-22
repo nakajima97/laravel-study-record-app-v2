@@ -12,7 +12,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // Blade の @vite がビルド済みの manifest を要求しないようにする
+        // ルートテンプレート（app.blade.php）の @vite がビルド済みの manifest を要求しないようにする
         $this->withoutVite();
     }
 }
