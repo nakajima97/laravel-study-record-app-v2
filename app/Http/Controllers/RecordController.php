@@ -7,20 +7,24 @@ use App\Models\Category;
 use App\UseCases\Category\GetCategoryList;
 use App\UseCases\Record\StoreRecord;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class RecordController extends Controller
 {
-    /**
-     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
-     */
-    public function create()
+    public function create(): Response
     {
         $user_id = Auth::id();
 
         $get_category_list = new GetCategoryList();
-        $records = $get_category_list($user_id);
+        $categories = $get_category_list($user_id);
 
-        return view('record.create')->with('records', $records);
+        return Inertia::render('record-create', [
+            'categories' => $categories->map(fn (Category $category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+            ]),
+        ]);
     }
 
     /**
