@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CategoryOrderController;
 use App\Http\Controllers\RecordController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -30,6 +31,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('categories', CategoryController::class);
     Route::post('/categories/archive/{id}', [CategoryArchiveController::class, 'store'])->name('categories.archive.store');
     Route::delete('/categories/archive/{id}', [CategoryArchiveController::class, 'delete'])->name('categories.archive.destroy');
+    // カテゴリーの並び替え（画面の JS から送る。ログインユーザーの並び順だけを更新する）
+    Route::patch('/category-order', [CategoryOrderController::class, 'update'])->name('category_order.update');
 
     Route::get('/records/create', [RecordController::class, 'create'])->name('records.create');
     Route::post('/records', [RecordController::class, 'store'])->name('records.store');

@@ -68,7 +68,7 @@ test('カテゴリーをドラッグで並び替えると、再読み込み後�
 
     // 「並び替え3」を先頭の「並び替え1」の上にドロップすると先頭に移る
     const saved = page.waitForResponse(
-        (response) => response.url().endsWith('/api/category-order') && response.request().method() === 'PATCH',
+        (response) => response.url().endsWith('/category-order') && response.request().method() === 'PATCH',
     );
     await page
         .getByRole('heading', { name: '並び替え3', exact: true })
