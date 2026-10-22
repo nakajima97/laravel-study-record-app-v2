@@ -1,11 +1,12 @@
 import { useForm } from "@inertiajs/react";
 import { useState, type SubmitEvent } from "react";
+import type { Category } from "@/entities/category";
 import { InputError } from "@/shared/ui";
 import { AppLayout } from "@/widgets/app-layout";
 import { StopwatchModal } from "./StopwatchModal";
 
 type Props = {
-    categories: { id: number; name: string }[];
+    categories: Category[];
 };
 
 export function RecordCreatePage({ categories }: Props) {

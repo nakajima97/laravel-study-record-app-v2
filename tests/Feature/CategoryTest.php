@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Category;
@@ -44,12 +45,13 @@ class CategoryTest extends TestCase
             ->get('/categories');
 
         $response->assertStatus(200);
-
-        foreach ($categories as $category) {
-            $response->assertSeeText($category->name);
-        }
-
-        $response->assertDontSeeText($other_users_category->name);
+        // 他人のカテゴリーは含まれない
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('category-list')
+            ->where('categories', $categories->map(fn ($category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+            ])->all()));
     }
 
     public function test_カテゴリーの登録が可能(): void
@@ -169,15 +171,16 @@ class CategoryTest extends TestCase
         $response = $this->actingAs($user)->get('/categories');
 
         $response->assertStatus(200);
-        $response->assertSeeText('カテゴリー一覧');
-        $response->assertSeeText('カテゴリー追加');
-        $response->assertSeeTextInOrder(['カテゴリーC', 'カテゴリーA', 'カテゴリーB', 'アーカイブ済みカテゴリー']);
-        $response->assertViewHas('categories', function ($categories) use ($first, $second, $third) {
-            return $categories->pluck('id')->all() === [$third->id, $first->id, $second->id];
-        });
-        $response->assertViewHas('archive_categories', function ($categories) use ($archived) {
-            return $categories->pluck('id')->all() === [$archived->id];
-        });
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('category-list')
+            ->where('categories', [
+                ['id' => $third->id, 'name' => 'カテゴリーC'],
+                ['id' => $first->id, 'name' => 'カテゴリーA'],
+                ['id' => $second->id, 'name' => 'カテゴリーB'],
+            ])
+            ->where('archive_categories', [
+                ['id' => $archived->id, 'name' => 'アーカイブ済みカテゴリー'],
+            ]));
     }
 
     public function test_カテゴリー追加画面を表示できる(): void
@@ -187,8 +190,7 @@ class CategoryTest extends TestCase
         $response = $this->actingAs($user)->get('/categories/create');
 
         $response->assertStatus(200);
-        $response->assertSeeText('カテゴリー記録追加');
-        $response->assertSeeText('カテゴリー名');
+        $response->assertInertia(fn (Assert $page) => $page->component('category-create'));
     }
 
     public function test_カテゴリーを登録するとログインユーザーのカテゴリーになり一覧へリダイレクトする(): void
@@ -227,10 +229,9 @@ class CategoryTest extends TestCase
         $response = $this->actingAs($user)->get('/categories/' . $category->id);
 
         $response->assertStatus(200);
-        $response->assertSeeText('カテゴリー詳細');
-        $response->assertSeeText('カテゴリー名：詳細カテゴリー');
-        $response->assertSee(route('categories.edit', $category->id));
-        $response->assertViewHas('category', fn ($viewCategory) => $viewCategory->id === $category->id);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('category-detail')
+            ->where('category', ['id' => $category->id, 'name' => '詳細カテゴリー']));
     }
 
     public function test_存在しないカテゴリーの詳細_編集_更新は404になる(): void
@@ -250,10 +251,10 @@ class CategoryTest extends TestCase
         $response = $this->actingAs($user)->get('/categories/' . $category->id . '/edit');
 
         $response->assertStatus(200);
-        $response->assertSeeText('カテゴリー編集');
-        $response->assertSee('value="編集カテゴリー"', false);
-        $response->assertSeeText('アーカイブする');
-        $response->assertDontSeeText('アーカイブ解除する');
+        // アーカイブされていないので「アーカイブする」ボタンを出す
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('category-edit')
+            ->where('category', ['id' => $category->id, 'name' => '編集カテゴリー', 'is_archive' => false]));
     }
 
     public function test_アーカイブ済みカテゴリーの編集画面にはアーカイブ解除ボタンが表示される(): void
@@ -265,8 +266,9 @@ class CategoryTest extends TestCase
         $response = $this->actingAs($user)->get('/categories/' . $category->id . '/edit');
 
         $response->assertStatus(200);
-        $response->assertSeeText('アーカイブ解除する');
-        $response->assertDontSeeText('アーカイブする');
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('category-edit')
+            ->where('category.is_archive', true));
     }
 
     public function test_カテゴリー名を変更すると一覧へリダイレクトする(): void
@@ -291,8 +293,10 @@ class CategoryTest extends TestCase
         $this->assertDatabaseHas('categories', ['id' => $category->id, 'is_archive' => true]);
 
         $this->actingAs($user)->get('/categories')
-            ->assertViewHas('categories', fn ($categories) => $categories->isEmpty())
-            ->assertViewHas('archive_categories', fn ($categories) => $categories->pluck('id')->all() === [$category->id]);
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('categories', 0)
+                ->where('archive_categories.0.id', $category->id)
+                ->has('archive_categories', 1));
     }
 
     public function test_カテゴリーのアーカイブを解除すると一覧へリダイレクトし_通常の一覧に戻る(): void
@@ -307,7 +311,9 @@ class CategoryTest extends TestCase
         $this->assertDatabaseHas('categories', ['id' => $category->id, 'is_archive' => false]);
 
         $this->actingAs($user)->get('/categories')
-            ->assertViewHas('categories', fn ($categories) => $categories->pluck('id')->all() === [$category->id])
-            ->assertViewHas('archive_categories', fn ($categories) => $categories->isEmpty());
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('categories.0.id', $category->id)
+                ->has('categories', 1)
+                ->has('archive_categories', 0));
     }
 }
